@@ -1,0 +1,64 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: odoo
+  labels:
+    app: odoo
+spec:
+  selector:
+    matchLabels:
+      app: odoo
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: odoo
+        tier: frontend
+    spec:
+      containers:
+      - image: odoo:14
+        name: odoo
+        env:
+        - name: HOST
+          value: odoo-postgres
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 8069
+          name: odoo
+        volumeMounts:
+        - name: odoo-persistent-storage        
+          mountPath: /var/lib/odoo
+      volumes:
+      - name: odoo-persistent-storage
+        persistentVolumeClaim:
+          claimName: odoo-pv-claim   
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo
+  labels:
+    app: odoo
+spec:
+  ports:
+    - port: 8069
+  selector:
+    app: odoo
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odoo-pv-claim
+  labels:
+    app: odoo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi  
